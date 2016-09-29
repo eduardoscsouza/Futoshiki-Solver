@@ -17,8 +17,7 @@ public:
 
 	Pos()
 	{
-		this->i=0;
-		this->j=0;
+		Pos(0, 0);
 	}
 
 	Pos(int i, int j)
@@ -31,6 +30,51 @@ public:
 	{
 		if (this->i != b.i) return this->i > b.i;
 		else return this->j > b.j;
+	}
+
+	const bool operator == (const Pos b) const
+	{
+		return (this->i == b.i) && (this->j == b.j);
+	}
+
+	const bool operator > (const Pos b) const
+	{
+		return !((*this < b) || (*this == b));
+	}
+
+	const bool operator != (const Pos b) const
+	{
+		return !(*this==b);
+	}
+};
+
+class Restriction
+{
+public:
+	Pos p1, p2;
+	int type;
+
+	Restriction()
+	{
+		Restriction(Pos(), Pos(), 0);
+	}
+
+	Restriction(int i1, int j1, int i2, int j2, int type)
+	{
+		Restriction(Pos(i1, j1), Pos(i2, j2), type);
+	}
+
+	Restriction(Pos p1, Pos p2, int type)
+	{
+		this->p1 = p1;
+		this->p2 = p2;
+		this->type = type;
+	}
+
+	const bool operator < (const Restriction b) const
+	{
+		if (this->p1 != b.p1) return this->p1 > b.p1;
+		else return this->p2 > b.p2;
 	}
 };
 
