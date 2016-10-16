@@ -10,7 +10,7 @@
 #define GAME_COMPLETED 0
 #define KEEP_GOING 1
 
-#define STD_HUERISTIC_LEVEL 1
+#define STD_HUERISTIC_LEVEL 2
 
 using namespace std;
 
@@ -116,6 +116,7 @@ public:
 	char size = 0, setted = 0;
 	char heur = 0;
 	char ** board = NULL;
+	long ops = 0;
 	Remaining ** remain = NULL;
 	map<Restriction, char> restricts = map<Restriction, char>();
 
@@ -125,6 +126,7 @@ public:
 		this->size = 0;
 		this->setted = 0;
 		this->heur = 0;
+		this->ops = 0;
 		this->board = NULL;
 		this->remain = NULL;
 		this->restricts = map<Restriction, char>();
@@ -135,6 +137,7 @@ public:
 		this->size = size;
 		this->setted = 0;
 		this->heur = 0;
+		this->ops = 0;
 		this->restricts = map<Restriction, char>();
 
 		this->board = new char*[size];
@@ -220,16 +223,16 @@ public:
 
 
 
-int no_heur(Futoshiki *, Pos);
-int set_possibility(Futoshiki *, Pos, char, bool);
-int update_restriction(Futoshiki *, Pos, Pos, char, bool);
-int update_possibilities(Futoshiki *, Pos, char, bool);
-int foward_checking(Futoshiki *, Pos);
+char no_heur(Futoshiki *, Pos);
+bool set_possibility(Futoshiki *, Pos, char, bool);
+bool update_restriction(Futoshiki *, Pos, Pos, char, bool);
+bool update_possibilities(Futoshiki *, Pos, char, bool);
+char foward_checking(Futoshiki *, Pos);
 void backtracking(Futoshiki *);
 
 
 
-int no_heur(Futoshiki * game, Pos pos)
+char no_heur(Futoshiki * game, Pos pos)
 {
 	for (char i=0; i<game->size; i++){
 		game->board[pos.i()][pos.j()] = i;
@@ -249,20 +252,18 @@ int no_heur(Futoshiki * game, Pos pos)
 }
 
 
-int set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
+bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
 	if (game->remain[pos.i()][pos.j()].vect[value] == 1 && !plus_minus) game->remain[pos.i()][pos.j()].count--;
 	if (game->remain[pos.i()][pos.j()].vect[value] == 0 && plus_minus) game->remain[pos.i()][pos.j()].count++;
 	
 	game->remain[pos.i()][pos.j()].vect[value] += plus_minus ? 1 : -1;
-	return ((game->remain[pos.i()][pos.j()].count <= 0 && game->board[pos.i()][pos.j()]==-1) ? 1 : 0);
+	return (game->remain[pos.i()][pos.j()].count <= 0 && game->board[pos.i()][pos.j()]==-1);
 }
 
-int update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_minus)
+bool update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_minus)
 {
-	if (p2.i() < 0 || p2.i() >=game->size || p2.j() < 0 || p2.j() >= game->size) return 0;
-	
-	int dead_end = 0;
+	bool dead_end = false;
 	Restriction res(p1, p2);
 	if (game->restricts.count(res)){
 		if (game->restricts[res] == LESSER){
@@ -280,9 +281,9 @@ int update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_m
 	return dead_end;
 }
 
-int update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus)
+bool update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
-	int dead_end = 0;
+	bool dead_end = false;
 	
 	Pos aux_pos = pos;
 	for (int i=0; i<game->size; i++) {
@@ -295,10 +296,10 @@ int update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus)
 	dead_end += update_restriction(game, pos, Pos(pos.i()+1, pos.j()), value, plus_minus);
 	dead_end += update_restriction(game, pos, Pos(pos.i()-1, pos.j()), value, plus_minus);
 	
-	return dead_end;
+	return !dead_end;
 }
 
-int foward_checking(Futoshiki * game, Pos pos)
+char foward_checking(Futoshiki * game, Pos pos)
 {
 	for (int i=0; i<game->size; i++){
 		if (game->remain[pos.i()][pos.j()].vect[i] >= 1){
@@ -306,7 +307,7 @@ int foward_checking(Futoshiki * game, Pos pos)
 			game->setted++;
 			if (game->ended()) return GAME_COMPLETED;
 			
-			if (update_possibilities(game, pos, i, false) <= 0){
+			if (update_possibilities(game, pos, i, false)){
 				backtracking(game);
 				if (game->ended()) return GAME_COMPLETED;
 			}
