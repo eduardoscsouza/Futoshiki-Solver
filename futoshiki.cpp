@@ -128,10 +128,11 @@ public:
 		this->count = size;
 	}
 	
+	/*
 	~Remaining()
 	{
-		delete[] this->vect;
-	}
+		delete this->vect;
+	}*/
 };
 
 
@@ -174,7 +175,8 @@ public:
 			for (int j=0; j<size; j++) this->remain[i][j] = Remaining(size);
 		}
 	}
-
+	
+	/*
 	~Futoshiki()
 	{
 		for (int i=0; i<this->size; i++) delete this->board[i];
@@ -184,8 +186,8 @@ public:
 			for (int j=0; j<this->size; j++) this->remain[i][j].~Remaining();
 			delete this->remain[i];
 		}
-		delete[] this->remain;
-	}
+		delete this->remain;
+	}*/
 
 
 	bool valid()
@@ -272,25 +274,29 @@ int set_possibilities(Futoshiki * game, int line, int col, int value, bool plus_
 	
 	for (int i=0; i<game->size; i++){
 		game->remain[line][i].vect[value] += plus_minus ? 1 : -1;
-		if (game->remain[line][i].vect[value] < 1) {
+		if (game->remain[line][i].vect[value] == 0) {
 			game->remain[line][i].count--;
 			if (game->remain[line][i].count <= 0 && game->board[line][i]==-1) dead_end = true;
 		}
+		else if (game->remain[line][i].vect[value] == 1) game->remain[line][i].count++;
 	}
 	
 	for (int i=0; i<game->size; i++){
 		game->remain[i][col].vect[value] += plus_minus ? 1 : -1;
-		if (game->remain[i][col].vect[value] < 1) {
+		if (game->remain[i][col].vect[value] == 0) {
 			game->remain[i][col].count--;
 			if (game->remain[i][col].count <= 0 && game->board[i][col]==-1) dead_end = true;
 		}
+		else if (game->remain[i][col].vect[value] == 1) game->remain[i][col].count++;
 	}
 	
 	set<Restriction>::iterator it;
 	Restriction res(line, col, line, col+1);
 	
 	it = game->restricts.find(res);
-	if (it != game->restricts.end()){}
+	if (it != game->restricts.end()){
+		
+	}
 	
 	return (!dead_end);
 }
@@ -344,18 +350,14 @@ int main(int argc, char * argv[])
 		cin>>size>>nRestricts;
 
 		Futoshiki * game = new Futoshiki(size);
-		for(int i=0; i<size; i++) for (int j=0; j<size; j++) {
-			int aux;
-			cin>>aux;
-			
-			
-			game->board[i][j] = aux - 1;
-			if (game->board[i][j] != -1){
-				game->setted++;
-				//set_possibilities(game, i, j, game->board[i][j], false);
+		for(int i=0; i<size; i++){
+			for (int j=0; j<size; j++) {
+				int aux;
+				cin>>aux;
+				game->board[i][j] = aux - 1;
 			}
 		}
-			
+		
 		for(int i=0; i<nRestricts; i++){
 			int i1=0, j1=0, i2=0, j2=0;
 			cin>>i1>>j1>>i2>>j2;
@@ -365,10 +367,20 @@ int main(int argc, char * argv[])
 			game->restricts.insert(Restriction(i2, j2, i1, j1, GREATER));
 		}
 		
+		for(int i=0; i<size; i++){
+			for (int j=0; j<size; j++) {
+				if (game->board[i][j] != -1){
+					game->setted++;
+					set_possibilities(game, i, j, game->board[i][j], false);
+				}
+			}
+		}
+			
+		
 		game->heur = 0;
 		backtracking(game);
 		game->print_board();
-		//delete game;
+		delete game;
 	}
 
 
