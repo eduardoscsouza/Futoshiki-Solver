@@ -1,6 +1,6 @@
 #include <iostream>
 #include <map>
-#include <set>
+#include <utility>
 #include <cstdlib>
 #include <cstring>
 
@@ -17,7 +17,7 @@ using namespace std;
 class Pos
 {
 public:
-	int i=0, j=0;
+	pair<int, int> pos;
 
 
 	Pos()
@@ -27,30 +27,21 @@ public:
 
 	Pos(int i, int j)
 	{
-		this->i = i;
-		this->j = j;
+		this->pos = pair<int, int>(i, j);
+	}
+	
+	const int i() const{
+		return this->pos.first;
+	}
+	
+	const int j() const{
+		return this->pos.second;
 	}
 
 
 	const bool operator < (const Pos b) const
 	{
-		if (this->i != b.i) return this->i > b.i;
-		else return this->j > b.j;
-	}
-
-	const bool operator > (const Pos b) const
-	{
-		return !((*this < b) || (*this == b));
-	}
-
-	const bool operator == (const Pos b) const
-	{
-		return ((this->i == b.i) && (this->j == b.j));
-	}
-
-	const bool operator != (const Pos b) const
-	{
-		return !(*this==b);
+		return this->pos < b.pos;
 	}
 };
 
@@ -58,52 +49,38 @@ public:
 class Restriction
 {
 public:
-	Pos p1 = Pos(), p2 = Pos();
-	int type = 0;
+	pair<Pos, Pos> rest;
 
 
 	Restriction()
 	{
-		Restriction(Pos(), Pos(), 0);
+		Restriction(Pos(0, 0), Pos(0 ,0));
 	}
-	
+	/*
 	Restriction(int i1, int j1, int i2, int j2)
 	{
-		Restriction(i1, j1, i2, j2, 0);
+		Restriction(Pos(i1, j1), Pos(i2, j2));
+	}*/
+
+	Restriction(Pos p1, Pos p2)
+	{
+		this->rest = pair<Pos, Pos>(p1, p2);
 	}
 	
-	Restriction(int i1, int j1, int i2, int j2, int type)
+	const Pos p1() const
 	{
-		Restriction(Pos(i1, j1), Pos(i2, j2), type);
+		return this->rest.first;
 	}
-
-	Restriction(Pos p1, Pos p2, int type)
+	
+	const Pos p2() const
 	{
-		this->p1 = p1;
-		this->p2 = p2;
-		this->type = type;
+		return this->rest.second;
 	}
 
 
 	const bool operator < (const Restriction b) const
 	{
-		if (this->p1 != b.p1) return this->p1 > b.p1;
-		else return this->p2 > b.p2;
-	}
-
-	const bool operator > (const Restriction b) const
-	{
-		return !((*this < b) || (*this == b));
-	}
-
-	const bool operator == (const Restriction b) const
-	{
-		return ((this->p1 == b.p1) && (this->p2 == b.p2));
-	}
-
-	const bool operator != (const Restriction b) const
-	{
-		return !(*this==b);
+		return this->rest < b.rest;
 	}
 };
 
@@ -143,7 +120,7 @@ public:
 	char heur = 0;
 	char ** board = NULL;
 	Remaining ** remain = NULL;
-	set<Restriction> restricts = set<Restriction>();
+	map<Restriction, int> restricts = map<Restriction, int>();
 
 
 	Futoshiki()
@@ -153,7 +130,7 @@ public:
 		this->heur = 0;
 		this->board = NULL;
 		this->remain = NULL;
-		this->restricts = set<Restriction>();
+		this->restricts = map<Restriction, int>();
 	}
 
 	Futoshiki(int size)
@@ -161,7 +138,7 @@ public:
 		this->size = size;
 		this->setted = 0;
 		this->heur = 0;
-		this->restricts = set<Restriction>();
+		this->restricts = map<Restriction, int>();
 
 		this->board = new char*[size];
 		for(int i=0; i<size; i++) {
@@ -192,10 +169,12 @@ public:
 
 	bool valid()
 	{
-		set<Restriction>::iterator it;
+		map<Restriction, int>::iterator it;
 		for (it=this->restricts.begin(); it!=this->restricts.end(); it++){
-			if (it->type == LESSER && this->board[it->p1.i][it->p1.j] >= this->board[it->p2.i][it->p2.j]) return false;
-			else if (it->type == GREATER && this->board[it->p1.i][it->p1.j] <= this->board[it->p2.i][it->p2.j]) return false;
+			Pos p1 = it->first.p1(), p2 = it->first.p2();
+			
+			if (it->second == LESSER && this->board[p1.i()][p1.j()] >= this->board[p2.i()][p2.j()]) return false;
+			else if (it->second == GREATER && this->board[p1.i()][p1.j()] <= this->board[p2.i()][p2.j()]) return false;
 		}
 
 		bool found[this->size];
@@ -224,12 +203,12 @@ public:
 
 	bool ended()
 	{
-		for (int i=0; i<this->size; i++)
-			for (int j=0; j<this->size; j++)
-				if (this->board[i][j] == -1) return false;
+		//for (int i=0; i<this->size; i++)
+			//for (int j=0; j<this->size; j++)
+				//if (this->board[i][j] == -1) return false;
 				
-		return true;
-		//return (this->setted >= this->size * this->size);
+		//return true;
+		return (this->setted >= this->size * this->size);
 	}
 	
 
@@ -249,7 +228,7 @@ public:
 
 int no_heur(Futoshiki *, int, int);
 int set_possibility(Futoshiki *, int, int, int, bool);
-int update_restriction(Futoshiki *, set<Restriction>::iterator, bool);
+int update_restriction(Futoshiki *, int, int, int, int, int, bool);
 int update_possibilities(Futoshiki *, int, int, int, bool);
 int foward_checking(Futoshiki *, int, int);
 void backtracking(Futoshiki *);
@@ -290,12 +269,9 @@ int update_restriction(Futoshiki * game, int line, int col, int line_2, int col_
 	if (line_2 < 0 || line_2 >=game->size || col_2 < 0 || col_2 >=game->size) return 0;
 	
 	int dead_end = 0;
-	set<Restriction>::iterator it;
-	Restriction res(line, col, line_2, col_2);
-	
-	it = game->restricts.find(res);
-	if (it != game->restricts.end()){
-		if (it->type == LESSER){
+	Restriction res(Pos(line, col), Pos(line_2, col_2));
+	if (game->restricts.count(res)){
+		if (game->restricts[res] == LESSER){
 			for (int i=value; i>=0; i--){
 				dead_end += set_possibility(game, line_2, col_2, i, plus_minus);
 			}
@@ -319,10 +295,10 @@ int update_possibilities(Futoshiki * game, int line, int col, int value, bool pl
 		dead_end += set_possibility(game, i, col, value, plus_minus);
 	}
 	
-	//dead_end += update_restriction(game, line, col, line, col+1, value, plus_minus);
-	//dead_end += update_restriction(game, line, col, line, col-1, value, plus_minus);
-	//dead_end += update_restriction(game, line, col, line+1, col, value, plus_minus);
-	//dead_end += update_restriction(game, line, col, line-1, col, value, plus_minus);
+	dead_end += update_restriction(game, line, col, line, col+1, value, plus_minus);
+	dead_end += update_restriction(game, line, col, line, col-1, value, plus_minus);
+	dead_end += update_restriction(game, line, col, line+1, col, value, plus_minus);
+	dead_end += update_restriction(game, line, col, line-1, col, value, plus_minus);
 	
 	return dead_end;
 }
@@ -381,17 +357,18 @@ int main(int argc, char * argv[])
 			for (int j=0; j<size; j++) {
 				int aux;
 				cin>>aux;
+				
 				game->board[i][j] = aux - 1;
 			}
 		}
 		
 		for(int i=0; i<nRestricts; i++){
-			int i1, j1, i2, j2;
+			int i1=0, j1=0, i2=0, j2=0;
 			cin>>i1>>j1>>i2>>j2;
 			i1--;i2--;j1--;j2--;
 
-			game->restricts.insert(Restriction(i1, j1, i2, j2, LESSER));
-			game->restricts.insert(Restriction(i2, j2, i1, j1, GREATER));
+			game->restricts[Restriction(Pos(i1, j1), Pos(i2, j2))] = LESSER;
+			game->restricts[Restriction(Pos(i2, j2), Pos(i1, j1))] = GREATER;
 		}
 		
 		for(int i=0; i<size; i++){
@@ -402,7 +379,7 @@ int main(int argc, char * argv[])
 				}
 			}
 		}
-			
+		
 		game->heur = 1;
 		backtracking(game);
 		game->print_board();
