@@ -1,6 +1,7 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <cstdio>
 #include <climits>
 #include <cstring>
 
@@ -12,7 +13,23 @@
 
 #define STD_HUERISTIC_LEVEL 2
 
+#define BACKTRACK_LIMIT 1000000
+
 using namespace std;
+
+
+
+class Pos;
+class Restriction;
+class Remaining;
+class Futoshiki;
+
+char no_heur(Futoshiki *, Pos);
+bool set_possibility(Futoshiki *, Pos, char, bool);
+bool update_restriction(Futoshiki *, Pos, Pos, char, bool);
+bool update_possibilities(Futoshiki *, Pos, char, bool);
+char foward_checking(Futoshiki *, Pos);
+void backtracking(Futoshiki *);
 
 
 
@@ -32,11 +49,13 @@ public:
 		this->pos = pair<char, char>(i, j);
 	}
 	
-	inline const char i() const{
+	inline const char i() const
+	{
 		return this->pos.first;
 	}
 	
-	inline const char j() const{
+	inline const char j() const
+	{
 		return this->pos.second;
 	}
 
@@ -85,8 +104,8 @@ public:
 class Remaining
 {
 public:
-	char * vect = NULL;
-	char count = 0;
+	char * vect;
+	char count;
 	
 	Remaining()
 	{
@@ -113,19 +132,19 @@ public:
 class Futoshiki
 {
 public:
-	char size = 0, setted = 0;
-	char heur = 0;
-	char ** board = NULL;
-	long ops = 0;
-	Remaining ** remain = NULL;
-	map<Restriction, char> restricts = map<Restriction, char>();
+	char size, setted;
+	char heur;
+	char ** board;
+	long ops;
+	Remaining ** remain;
+	map<Restriction, char> restricts;
 
 
 	Futoshiki()
 	{
 		this->size = 0;
 		this->setted = 0;
-		this->heur = 0;
+		this->heur = STD_HUERISTIC_LEVEL;
 		this->ops = 0;
 		this->board = NULL;
 		this->remain = NULL;
@@ -136,7 +155,7 @@ public:
 	{
 		this->size = size;
 		this->setted = 0;
-		this->heur = 0;
+		this->heur = STD_HUERISTIC_LEVEL;
 		this->ops = 0;
 		this->restricts = map<Restriction, char>();
 
@@ -165,6 +184,46 @@ public:
 		}
 		delete this->remain;
 	}*/
+
+
+	void read_board(char size, char nRestricts)
+	{
+		for(char i=0; i<size; i++){
+			for (char j=0; j<size; j++) {
+				scanf("%hhd", this->board[i] + j);
+				this->board[i][j]--;
+			}
+		}
+		
+		for(char i=0; i<nRestricts; i++){
+			char i1, j1, i2, j2;
+			scanf("%hhd%hhd%hhd%hhd", &i1, &j1, &i2, &j2);
+			i1--;i2--;j1--;j2--;
+
+			this->restricts[Restriction(Pos(i1, j1), Pos(i2, j2))] = LESSER;
+			this->restricts[Restriction(Pos(i2, j2), Pos(i1, j1))] = GREATER;
+		}
+		
+		for(char i=0; i<size; i++){
+			for (char j=0; j<size; j++) {
+				if (this->board[i][j] != -1){
+					this->setted++;
+					update_possibilities(this, Pos(i, j), this->board[i][j], false);
+				}
+			}
+		}
+	}
+
+	void print_board()
+	{
+		for (char i=0; i<this->size; i++){
+			for (char j=0; j<this->size; j++){
+				printf("%hhd", this->board[i][j]+1);
+				if (j != this->size-1) printf(" ");
+			}
+			printf("\n");
+		}
+	}
 
 
 	bool valid()
@@ -203,32 +262,11 @@ public:
 		return true;
 	}
 
-	bool ended()
+	inline bool ended()
 	{
 		return (this->setted >= this->size * this->size);
 	}
-	
-
-	void print_board()
-	{
-		for (char i=0; i<this->size; i++){
-			for (char j=0; j<this->size; j++){
-				printf("%d", this->board[i][j]+1);
-				if (j != this->size-1) printf(" ");
-			}
-			printf("\n");
-		}
-	}
 };
-
-
-
-char no_heur(Futoshiki *, Pos);
-bool set_possibility(Futoshiki *, Pos, char, bool);
-bool update_restriction(Futoshiki *, Pos, Pos, char, bool);
-bool update_possibilities(Futoshiki *, Pos, char, bool);
-char foward_checking(Futoshiki *, Pos);
-void backtracking(Futoshiki *);
 
 
 
@@ -238,6 +276,7 @@ char no_heur(Futoshiki * game, Pos pos)
 		game->board[pos.i()][pos.j()] = i;
 		if (game->valid()){
 			game->setted++;
+			game->ops++;
 			if (game->ended()) return GAME_COMPLETED; 
 
 			backtracking(game);
@@ -267,12 +306,12 @@ bool update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_
 	Restriction res(p1, p2);
 	if (game->restricts.count(res)){
 		if (game->restricts[res] == LESSER){
-			for (int i=value; i>=0; i--){
+			for (char i=value; i>=0; i--){
 				dead_end += set_possibility(game, p2, i, plus_minus);
 			}
 		}
 		else{
-			for (int i=value; i<game->size; i++){
+			for (char i=value; i<game->size; i++){
 				dead_end += set_possibility(game, p2, i, plus_minus);
 			}
 		}
@@ -285,8 +324,7 @@ bool update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus
 {
 	bool dead_end = false;
 	
-	Pos aux_pos = pos;
-	for (int i=0; i<game->size; i++) {
+	for (char i=0; i<game->size; i++) {
 		dead_end += set_possibility(game, Pos(pos.i(), i), value, plus_minus);
 		dead_end += set_possibility(game, Pos(i, pos.j()), value, plus_minus);
 	}
@@ -301,10 +339,11 @@ bool update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus
 
 char foward_checking(Futoshiki * game, Pos pos)
 {
-	for (int i=0; i<game->size; i++){
+	for (char i=0; i<game->size; i++){
 		if (game->remain[pos.i()][pos.j()].vect[i] >= 1){
 			game->board[pos.i()][pos.j()] = i;
 			game->setted++;
+			game->ops++;
 			if (game->ended()) return GAME_COMPLETED;
 			
 			if (update_possibilities(game, pos, i, false)){
@@ -323,9 +362,11 @@ char foward_checking(Futoshiki * game, Pos pos)
 
 void backtracking(Futoshiki * game)
 {
+	if (game->ops > BACKTRACK_LIMIT) return;
+
 	if (game->heur != 2){
-		for (int i=0; i<game->size; i++){
-			for (int j=0; j<game->size; j++){
+		for (char i=0; i<game->size; i++){
+			for (char j=0; j<game->size; j++){
 				if (game->board[i][j] == -1){
 					if (game->heur==0){
 						if (no_heur(game, Pos(i, j)) == GAME_COMPLETED) return;
@@ -340,9 +381,9 @@ void backtracking(Futoshiki * game)
 	}
 	
 	else{
-		int min = INT_MAX, min_line = -1, min_col = -1;
-		for (int i=0; i<game->size; i++){
-			for (int j=0; j<game->size; j++){
+		char min = CHAR_MAX, min_line = -1, min_col = -1;
+		for (char i=0; i<game->size; i++){
+			for (char j=0; j<game->size; j++){
 				if (game->board[i][j] == -1 && game->remain[i][j].count < min){
 					min = game->remain[i][j].count;
 					min_line = i;
@@ -353,7 +394,6 @@ void backtracking(Futoshiki * game)
 		
 		if (min_line==-1 || min_col==-1 || foward_checking(game, Pos(min_line, min_col)) == GAME_COMPLETED) return;
 	}
-		
 }
 
 
@@ -364,44 +404,25 @@ int main(int argc, char * argv[])
 	scanf("%ld", &testCases);
 	for (long k=0; k<testCases; k++){
 		char size, nRestricts;
-		scanf("%d%d", &size, &nRestricts);
-
+		scanf("%hhd%hhd", &size, &nRestricts);
+		
 		Futoshiki * game = new Futoshiki(size);
-		for(char i=0; i<size; i++){
-			for (char j=0; j<size; j++) {
-				char aux;
-				scanf("%d", &aux);
-				
-				game->board[i][j] = aux - 1;
-			}
-		}
-		
-		for(char i=0; i<nRestricts; i++){
-			char i1, j1, i2, j2;
-			scanf("%d%d%d%d", &i1, &j1, &i2, &j2);
-			i1--;i2--;j1--;j2--;
+		game->read_board(size, nRestricts);
 
-			game->restricts[Restriction(Pos(i1, j1), Pos(i2, j2))] = LESSER;
-			game->restricts[Restriction(Pos(i2, j2), Pos(i1, j1))] = GREATER;
-		}
-		
-		for(char i=0; i<size; i++){
-			for (char j=0; j<size; j++) {
-				if (game->board[i][j] != -1){
-					game->setted++;
-					update_possibilities(game, Pos(i, j), game->board[i][j], false);
-				}
-			}
-		}
-		
-		if (argc == 2) sscanf(argv[1], "%d", &(game->heur));
+		if (argc == 2) sscanf(argv[1], "%hhd", &(game->heur));
 		else game->heur = STD_HUERISTIC_LEVEL;
 		
-		printf("%d\n", game->valid());
 		backtracking(game);
-		game->print_board();
-		
-		printf("%d\n", game->valid());
+		if (!game->valid()){
+			printf("Errado\n");
+			return -1;
+		}
+		else{
+			if (game->ops <= BACKTRACK_LIMIT) game->print_board();
+			else printf("Numero de atribuicoes excede limite maximo");
+			printf("\n");
+		}
+
 		delete game;
 	}
 

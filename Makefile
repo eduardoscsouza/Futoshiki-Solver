@@ -2,11 +2,16 @@ all:
 	g++ futoshiki.cpp -O3 -o futoshiki.out
 
 run:
-	./futoshiki.out 
+	./futoshiki.out 2
 
 clean:
 	rm *.out *.o
 
 test:
-	g++ futoshiki.cpp -Wall -Wextra -Wno-ignored-qualifiers -O3 -g -o futoshiki.out
-	valgrind --leak-check=full --track-origins=yes ./futoshiki.out  < in
+	g++ futoshiki.cpp -Wall -Wextra -Wno-ignored-qualifiers -Wno-char-subscripts -O3 -g -o futoshiki.out
+	valgrind --leak-check=full --track-origins=yes ./futoshiki.out 2 < in
+
+time:
+	g++ futoshiki.cpp -O3 -o futoshiki.out
+	time ./futoshiki.out 2 < in
+	@echo "\n"
