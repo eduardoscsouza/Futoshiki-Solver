@@ -1,6 +1,8 @@
 #include <iostream>
 #include <map>
 #include <utility>
+#include <sstream>
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 
@@ -9,6 +11,8 @@
 
 #define GAME_COMPLETED -1
 #define KEEP_GOING 0
+
+#define STD_HUERISTIC_LEVEL 2
 
 using namespace std;
 
@@ -327,25 +331,43 @@ int foward_checking(Futoshiki * game, int line, int col)
 
 void backtracking(Futoshiki * game)
 {
-	for (int i=0; i<game->size; i++){
-		for (int j=0; j<game->size; j++){
-			if (game->board[i][j] == -1){
-				if (game->heur==0){
-					if (no_heur(game, i, j) == GAME_COMPLETED) return;
-				}
-				
-				else if(game->heur==1){
-					if (foward_checking(game, i, j) == GAME_COMPLETED) return;
+	if (game->heur != 2){
+		for (int i=0; i<game->size; i++){
+			for (int j=0; j<game->size; j++){
+				if (game->board[i][j] == -1){
+					if (game->heur==0){
+						if (no_heur(game, i, j) == GAME_COMPLETED) return;
+					}
+					
+					else{
+						if (foward_checking(game, i, j) == GAME_COMPLETED) return;
+					}
 				}
 			}
 		}
 	}
+	
+	else{
+		int min = INT_MAX, min_line = -1, min_col = -1;
+		for (int i=0; i<game->size; i++){
+			for (int j=0; j<game->size; j++){
+				if (game->board[i][j] == -1 && game->remain[i][j].count < min){
+					min = game->remain[i][j].count;
+					min_line = i;
+					min_col = j;
+				}
+			}
+		}
+		
+		if (min_line==-1 || min_col==-1 || foward_checking(game, min_line, min_col) == GAME_COMPLETED) return;
+	}
+		
 }
 
 
 
 int main(int argc, char * argv[])
-{
+{	
 	int testCases;
 	cin>>testCases;
 	for (int k=0; k<testCases; k++){
@@ -380,7 +402,12 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		game->heur = 1;
+		if (argc == 2) {
+			stringstream ss(argv[1]);
+			ss>>game->heur;
+			cout<<game->heur;
+		}
+		else game->heur = STD_HUERISTIC_LEVEL;
 		backtracking(game);
 		game->print_board();
 		delete game;
