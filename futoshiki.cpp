@@ -224,7 +224,12 @@ public:
 
 	bool ended()
 	{
-		return (this->setted >= this->size * this->size);
+		for (int i=0; i<this->size; i++)
+			for (int j=0; j<this->size; j++)
+				if (this->board[i][j] == -1) return false;
+				
+		return true;
+		//return (this->setted >= this->size * this->size);
 	}
 	
 
@@ -243,7 +248,9 @@ public:
 
 
 int no_heur(Futoshiki *, int, int);
-int set_possibilities(Futoshiki *, int, int, int, bool);
+int set_possibility(Futoshiki *, int, int, int, bool);
+int update_restriction(Futoshiki *, set<Restriction>::iterator, bool);
+int update_possibilities(Futoshiki *, int, int, int, bool);
 int foward_checking(Futoshiki *, int, int);
 void backtracking(Futoshiki *);
 
@@ -268,37 +275,56 @@ int no_heur(Futoshiki * game, int line, int col)
 	return KEEP_GOING;
 }
 
-int set_possibilities(Futoshiki * game, int line, int col, int value, bool plus_minus)
+
+int set_possibility(Futoshiki * game, int line, int col, int value, bool plus_minus)
 {
-	bool dead_end = false;
+	if (game->remain[line][col].vect[value] == 1 && !plus_minus) game->remain[line][col].count--;
+	if (game->remain[line][col].vect[value] == 0 && plus_minus) game->remain[line][col].count++;
 	
-	for (int i=0; i<game->size; i++){
-		game->remain[line][i].vect[value] += plus_minus ? 1 : -1;
-		if (game->remain[line][i].vect[value] == 0) {
-			game->remain[line][i].count--;
-			if (game->remain[line][i].count <= 0 && game->board[line][i]==-1) dead_end = true;
-		}
-		else if (game->remain[line][i].vect[value] == 1) game->remain[line][i].count++;
-	}
+	game->remain[line][col].vect[value] += plus_minus ? 1 : -1;
+	return ((game->remain[line][col].count <= 0 && game->board[line][col]==-1) ? 1 : 0);
+}
+
+int update_restriction(Futoshiki * game, int line, int col, int line_2, int col_2, int value, bool plus_minus)
+{
+	if (line_2 < 0 || line_2 >=game->size || col_2 < 0 || col_2 >=game->size) return 0;
 	
-	for (int i=0; i<game->size; i++){
-		game->remain[i][col].vect[value] += plus_minus ? 1 : -1;
-		if (game->remain[i][col].vect[value] == 0) {
-			game->remain[i][col].count--;
-			if (game->remain[i][col].count <= 0 && game->board[i][col]==-1) dead_end = true;
-		}
-		else if (game->remain[i][col].vect[value] == 1) game->remain[i][col].count++;
-	}
-	
+	int dead_end = 0;
 	set<Restriction>::iterator it;
-	Restriction res(line, col, line, col+1);
+	Restriction res(line, col, line_2, col_2);
 	
 	it = game->restricts.find(res);
 	if (it != game->restricts.end()){
-		
+		if (it->type == LESSER){
+			for (int i=value; i>=0; i--){
+				dead_end += set_possibility(game, line_2, col_2, i, plus_minus);
+			}
+		}
+		else{
+			for (int i=value; i<game->size; i++){
+				dead_end += set_possibility(game, line_2, col_2, i, plus_minus);
+			}
+		}
+	}
+				
+	return dead_end;
+}
+
+int update_possibilities(Futoshiki * game, int line, int col, int value, bool plus_minus)
+{
+	int dead_end = 0;
+	
+	for (int i=0; i<game->size; i++) {
+		dead_end += set_possibility(game, line, i, value, plus_minus);
+		dead_end += set_possibility(game, i, col, value, plus_minus);
 	}
 	
-	return (!dead_end);
+	//dead_end += update_restriction(game, line, col, line, col+1, value, plus_minus);
+	//dead_end += update_restriction(game, line, col, line, col-1, value, plus_minus);
+	//dead_end += update_restriction(game, line, col, line+1, col, value, plus_minus);
+	//dead_end += update_restriction(game, line, col, line-1, col, value, plus_minus);
+	
+	return dead_end;
 }
 
 int foward_checking(Futoshiki * game, int line, int col)
@@ -309,11 +335,11 @@ int foward_checking(Futoshiki * game, int line, int col)
 			game->setted++;
 			if (game->ended()) return GAME_COMPLETED;
 			
-			if (set_possibilities(game, line, col, i, false)){
+			if (update_possibilities(game, line, col, i, false) <= 0){
 				backtracking(game);
 				if (game->ended()) return GAME_COMPLETED;
 			}
-			set_possibilities(game, line, col, i, true);
+			update_possibilities(game, line, col, i, true);
 			game->setted--;
 		}
 	}
@@ -321,6 +347,7 @@ int foward_checking(Futoshiki * game, int line, int col)
 	game->board[line][col] = -1;
 	return KEEP_GOING;
 }
+
 
 void backtracking(Futoshiki * game)
 {
@@ -359,7 +386,7 @@ int main(int argc, char * argv[])
 		}
 		
 		for(int i=0; i<nRestricts; i++){
-			int i1=0, j1=0, i2=0, j2=0;
+			int i1, j1, i2, j2;
 			cin>>i1>>j1>>i2>>j2;
 			i1--;i2--;j1--;j2--;
 
@@ -371,13 +398,12 @@ int main(int argc, char * argv[])
 			for (int j=0; j<size; j++) {
 				if (game->board[i][j] != -1){
 					game->setted++;
-					set_possibilities(game, i, j, game->board[i][j], false);
+					update_possibilities(game, i, j, game->board[i][j], false);
 				}
 			}
 		}
 			
-		
-		game->heur = 0;
+		game->heur = 1;
 		backtracking(game);
 		game->print_board();
 		delete game;
