@@ -15,7 +15,7 @@
 
 #define STD_HUERISTIC_LEVEL 2
 
-#define BACKTRACK_LIMIT 10000000
+#define BACKTRACK_LIMIT 1000000
 
 using namespace std;
 
@@ -159,7 +159,7 @@ public:
 	Remaining()
 	{
 		this->vect = NULL;
-		this-> count = 0;
+		this->count = 0;
 	}
 	
 	Remaining(char size)
@@ -273,6 +273,11 @@ public:
 					update_possibilities(this, Pos(i, j), this->board[i][j], false);
 				}
 			}
+		}
+				
+		if (!this->valid()){
+			printf("Tabuleiro Invalido\n");
+			exit(-2);
 		}
 	}
 	
@@ -540,11 +545,6 @@ int main(int argc, char * argv[])
 		
 		Futoshiki * game = new Futoshiki(size);
 		game->read_board(size, nRestricts);
-		
-		if (!game->valid()){
-			printf("Tabuleiro Invalido\n");
-			return -2;
-		}
 	
 		//Definicao da heuristica por flag na chamada do programa
 		if (argc == 2) sscanf(argv[1], "%hhd", &(game->heur));
