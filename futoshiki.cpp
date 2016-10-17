@@ -1,10 +1,8 @@
-#include <iostream>
 #include <map>
-#include <sstream>
 #include <cstdio>
+#include <cstdlib>
 #include <climits>
 #include <cstring>
-#include <cstdlib>
 #include <ctime>
 
 #define LESSER -1
@@ -57,14 +55,24 @@ public:
 		this->pos = pair<char, char>(i, j);
 	}
 	
-	inline char& i()
+	inline char get_i()
 	{
 		return this->pos.first;
 	}
 	
-	inline char& j()
+	inline char get_j()
 	{
 		return this->pos.second;
+	}
+	
+	inline void set_i(char i)
+	{
+		this->pos.first = i;
+	}
+	
+	inline void set_j(char j)
+	{
+		this->pos.second = j;
 	}
 
 
@@ -96,26 +104,35 @@ public:
 		this->rest = pair<Pos, Pos>(p1, p2);
 	}
 	
-	inline Pos& p1()
+	inline Pos get_p1()
 	{
 		return this->rest.first;
 	}
 	
-	inline Pos& p2()
+	inline Pos get_p2()
 	{
 		return this->rest.second;
 	}
 	
-	inline const Pos& p1() const
+	inline const Pos get_p1() const
 	{
 		return this->rest.first;
 	}
 	
-	inline const Pos& p2() const
+	inline const Pos get_p2() const
 	{
 		return this->rest.second;
 	}
-
+	
+	inline void set_p1(Pos p1)
+	{
+		this->rest.first = p1;
+	}
+	
+	inline void set_p2(Pos p2)
+	{
+		this->rest.second = p2;
+	}
 
 	const bool operator < (const Restriction b) const
 	{
@@ -239,7 +256,12 @@ public:
 			char i1, j1, i2, j2;
 			scanf("%hhd%hhd%hhd%hhd", &i1, &j1, &i2, &j2);
 			i1--;i2--;j1--;j2--;
-
+			
+			if (abs(i1 - i2) + abs(j1 - j2) != 1){
+				printf("Tabuleiro Invalido\n");
+				exit(-2);
+			}
+			
 			this->restricts[Restriction(Pos(i1, j1), Pos(i2, j2))] = LESSER;
 			this->restricts[Restriction(Pos(i2, j2), Pos(i1, j1))] = GREATER;
 		}
@@ -277,11 +299,11 @@ public:
 	{
 		map<Restriction, char>::iterator it;
 		for (it=this->restricts.begin(); it!=this->restricts.end(); it++){
-			Pos p1 = it->first.p1(), p2 = it->first.p2();
+			Pos p1 = it->first.get_p1(), p2 = it->first.get_p2();
 			
-			if (this->board[p1.i()][p1.j()]!=-1 && this->board[p2.i()][p2.j()]!=-1){
-				if (it->second == LESSER && this->board[p1.i()][p1.j()] >= this->board[p2.i()][p2.j()]) return false;
-				else if (it->second == GREATER && this->board[p1.i()][p1.j()] <= this->board[p2.i()][p2.j()]) return false;
+			if (this->board[p1.get_i()][p1.get_j()]!=-1 && this->board[p2.get_i()][p2.get_j()]!=-1){
+				if (it->second == LESSER && this->board[p1.get_i()][p1.get_j()] >= this->board[p2.get_i()][p2.get_j()]) return false;
+				else if (it->second == GREATER && this->board[p1.get_i()][p1.get_j()] <= this->board[p2.get_i()][p2.get_j()]) return false;
 			}
 		}
 
@@ -331,7 +353,7 @@ de posicoes definidas for igual ao maximo possivel
 char no_heur(Futoshiki * game, Pos pos)
 {
 	for (char i=0; i<game->size; i++){
-		game->board[pos.i()][pos.j()] = i;
+		game->board[pos.get_i()][pos.get_j()] = i;
 		if (game->valid()){
 			game->setted++;
 			game->ops++;
@@ -344,7 +366,7 @@ char no_heur(Futoshiki * game, Pos pos)
 		}
 	}
 	
-	game->board[pos.i()][pos.j()] = -1;
+	game->board[pos.get_i()][pos.get_j()] = -1;
 	return KEEP_GOING;
 }
 
@@ -358,13 +380,13 @@ quando necessário. Retorna se a posicao ficou com
 inline bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
 	//Altera o contador caso mude de 0 para 1 ou de 1 para 0
-	if (game->remain[pos.i()][pos.j()].vect[value] == 1 && !plus_minus) game->remain[pos.i()][pos.j()].count--;
-	if (game->remain[pos.i()][pos.j()].vect[value] == 0 && plus_minus) game->remain[pos.i()][pos.j()].count++;
+	if (game->remain[pos.get_i()][pos.get_j()].vect[value] == 1 && !plus_minus) game->remain[pos.get_i()][pos.get_j()].count--;
+	if (game->remain[pos.get_i()][pos.get_j()].vect[value] == 0 && plus_minus) game->remain[pos.get_i()][pos.get_j()].count++;
 	
 	//Soma ou subtrai do vetor
-	game->remain[pos.i()][pos.j()].vect[value] += plus_minus ? 1 : -1;
+	game->remain[pos.get_i()][pos.get_j()].vect[value] += plus_minus ? 1 : -1;
 	//Retorna se ha 0 possibilidades
-	return (game->remain[pos.i()][pos.j()].count <= 0 && game->board[pos.i()][pos.j()]==-1);
+	return (game->remain[pos.get_i()][pos.get_j()].count <= 0 && game->board[pos.get_i()][pos.get_j()]==-1);
 }
 
 /*
@@ -408,26 +430,23 @@ bool update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus
 	Pos aux_pos;
 	//Atualizar possibilidades das linhas e colunas
 	for (char i=0; i<game->size; i++) {
-		aux_pos.i() = pos.i();
-		aux_pos.j() = i;
+		aux_pos.set_i(pos.get_i());
+		aux_pos.set_j(i);
 		dead_end += set_possibility(game, aux_pos, value, plus_minus);
 		
-		aux_pos.i() = i;
-		aux_pos.j() = pos.j();
+		aux_pos.set_i(i);
+		aux_pos.set_j(pos.get_j());
 		dead_end += set_possibility(game, aux_pos, value, plus_minus);
 	}
 	
 	//Atualizar possibilidades das restricoes de maior e menor
-	aux_pos.i() = pos.i();
-	aux_pos.j() = pos.j();
-	
-	aux_pos.j()++;
+	aux_pos.set_i(pos.get_i());aux_pos.set_j(pos.get_j()+1);
 	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
-	aux_pos.j()--;aux_pos.j()--;
+	aux_pos.set_j(pos.get_j()-1);
 	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
-	aux_pos.j()++;aux_pos.i()++;
+	aux_pos.set_i(pos.get_i()+1);aux_pos.set_j(pos.get_j());
 	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
-	aux_pos.i()--;
+	aux_pos.set_i(pos.get_i()-1);
 	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
 	
 	return dead_end;
@@ -443,8 +462,8 @@ continua a recursao chamando a funcao backtracking.
 char foward_checking(Futoshiki * game, Pos pos)
 {
 	for (char i=0; i<game->size; i++){
-		if (game->remain[pos.i()][pos.j()].vect[i] >= 1){
-			game->board[pos.i()][pos.j()] = i;
+		if (game->remain[pos.get_i()][pos.get_j()].vect[i] >= 1){
+			game->board[pos.get_i()][pos.get_j()] = i;
 			game->setted++;
 			game->ops++;
 			if (game->ended()) return GAME_COMPLETED;
@@ -458,7 +477,7 @@ char foward_checking(Futoshiki * game, Pos pos)
 		}
 	}
 	
-	game->board[pos.i()][pos.j()] = -1;
+	game->board[pos.get_i()][pos.get_j()] = -1;
 	return KEEP_GOING;
 }
 
@@ -521,6 +540,11 @@ int main(int argc, char * argv[])
 		
 		Futoshiki * game = new Futoshiki(size);
 		game->read_board(size, nRestricts);
+		
+		if (!game->valid()){
+			printf("Tabuleiro Invalido\n");
+			return -2;
+		}
 	
 		//Definicao da heuristica por flag na chamada do programa
 		if (argc == 2) sscanf(argv[1], "%hhd", &(game->heur));
