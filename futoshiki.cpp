@@ -12,6 +12,8 @@
 #define GAME_COMPLETED 0
 #define KEEP_GOING 1
 
+#define DEAD_END 1
+
 #define STD_HUERISTIC_LEVEL 2
 
 #define BACKTRACK_LIMIT 1000000
@@ -345,34 +347,42 @@ char no_heur(Futoshiki * game, Pos pos)
 /*
 Funcao que remove ou adiciona "value"
 das possibilidades de "pos", alterando o contador
-quando necessário
+quando necessário. Retorna se a posicao ficou com
+0 possibilidades.
 */
 bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
+	//Altera o contador caso mude de 0 para 1 ou de 1 para 0
 	if (game->remain[pos.i()][pos.j()].vect[value] == 1 && !plus_minus) game->remain[pos.i()][pos.j()].count--;
 	if (game->remain[pos.i()][pos.j()].vect[value] == 0 && plus_minus) game->remain[pos.i()][pos.j()].count++;
 	
+	//Soma ou subtrai do vetor
 	game->remain[pos.i()][pos.j()].vect[value] += plus_minus ? 1 : -1;
+	//Retorna se ha 0 possibilidades
 	return (game->remain[pos.i()][pos.j()].count <= 0 && game->board[pos.i()][pos.j()]==-1);
 }
 
 /*
 Funcao que atualiza os valores possiveis
 considerando apenas as restricoes de maior ou menor
-entre duas posicoes
+entre duas posicoes. Retorna se alguma posicao
+ficou com 0 possibilidades;
 */
 bool update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_minus)
 {
 	bool dead_end = false;
+	
 	Restriction res(p1, p2);
-	if (game->restricts.count(res)){
+	if (game->restricts.count(res)){ //Se a restricao existe
 		if (game->restricts[res] == LESSER){
-			for (char i=value; i>=0; i--){
+			//Atualizar todas as possibilidades menores
+			for (char i=value-1; i>=0; i--){
 				dead_end += set_possibility(game, p2, i, plus_minus);
 			}
 		}
 		else{
-			for (char i=value; i<game->size; i++){
+			//Atualizar todas as possibilidades maiores
+			for (char i=value+1; i<game->size; i++){
 				dead_end += set_possibility(game, p2, i, plus_minus);
 			}
 		}
@@ -381,23 +391,37 @@ bool update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_
 	return dead_end;
 }
 
+/*
+Funcao que atualiza as possibilidades de todas as
+posicoes na mesma linha e coluna que "pos", e tambem das
+adjacentes com relacao as restricoes de menor e maior.
+*/
 bool update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
 	bool dead_end = false;
 	
+	//Atualizar possibilidades das linhas e colunas
 	for (char i=0; i<game->size; i++) {
 		dead_end += set_possibility(game, Pos(pos.i(), i), value, plus_minus);
 		dead_end += set_possibility(game, Pos(i, pos.j()), value, plus_minus);
 	}
 	
+	//Atualizar possibilidades das restricoes de maior e menor
 	dead_end += update_restriction(game, pos, Pos(pos.i(), pos.j()+1), value, plus_minus);
 	dead_end += update_restriction(game, pos, Pos(pos.i(), pos.j()-1), value, plus_minus);
 	dead_end += update_restriction(game, pos, Pos(pos.i()+1, pos.j()), value, plus_minus);
 	dead_end += update_restriction(game, pos, Pos(pos.i()-1, pos.j()), value, plus_minus);
 	
-	return !dead_end;
+	return dead_end;
 }
 
+/*
+Funcao que define um valor possivel para a posicao "pos",
+depois atualiza as possibilidades das outras posicoes do tabuleiro.
+Caso o jogo esteja completo a recursao para. Caso contrario, 
+ela verifica se alguma posicao fica com 0 possibilidades. Caso não
+continua a recursao chamando a funcao backtracking.
+*/
 char foward_checking(Futoshiki * game, Pos pos)
 {
 	for (char i=0; i<game->size; i++){
@@ -407,7 +431,7 @@ char foward_checking(Futoshiki * game, Pos pos)
 			game->ops++;
 			if (game->ended()) return GAME_COMPLETED;
 			
-			if (update_possibilities(game, pos, i, false)){
+			if (update_possibilities(game, pos, i, false) != DEAD_END){
 				backtracking(game);
 				if (game->ended()) return GAME_COMPLETED;
 			}
@@ -421,6 +445,11 @@ char foward_checking(Futoshiki * game, Pos pos)
 }
 
 
+/*
+Funcao de bactracking, que percorre o tabuleiro e
+chama uma funcao de heurista que aplicará a heuristica
+e chamará a recursão indireta.
+*/
 void backtracking(Futoshiki * game)
 {
 	if (game->ops > BACKTRACK_LIMIT) return;
@@ -442,6 +471,11 @@ void backtracking(Futoshiki * game)
 	}
 	
 	else{
+		/*
+		Heuristica MVR que percorrera todo o tabuleiro]
+		antes de chamar a recursao, procurando a posicao
+		com menos possibilidades.
+		*/
 		char min = CHAR_MAX, min_line = -1, min_col = -1;
 		for (char i=0; i<game->size; i++){
 			for (char j=0; j<game->size; j++){
@@ -469,7 +503,8 @@ int main(int argc, char * argv[])
 		
 		Futoshiki * game = new Futoshiki(size);
 		game->read_board(size, nRestricts);
-
+	
+		//Definicao da heuristica por flag na chamada do programa
 		if (argc == 2) sscanf(argv[1], "%hhd", &(game->heur));
 		else game->heur = STD_HUERISTIC_LEVEL;
 		
@@ -486,7 +521,7 @@ int main(int argc, char * argv[])
 		}
 		
 		clock_t end = clock();
-		printf("Tempo decorrido: %d\nOperacoes feitas; %d\n", (1000.0*(end-start))/CLOCKS_PER_SEC, game->ops);
+		printf("Tempo decorrido: %lf\nOperacoes feitas; %ld\n", (1000.0*(end-start))/CLOCKS_PER_SEC, game->ops);
 
 		delete game;
 	}
