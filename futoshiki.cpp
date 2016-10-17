@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <climits>
 #include <cstring>
+#include <ctime>
 
 #define LESSER -1
 #define GREATER 1
@@ -472,6 +473,7 @@ int main(int argc, char * argv[])
 		if (argc == 2) sscanf(argv[1], "%hhd", &(game->heur));
 		else game->heur = STD_HUERISTIC_LEVEL;
 		
+		clock_t start = clock();
 		backtracking(game);
 		if (!game->valid()){
 			printf("Errado\n");
@@ -482,6 +484,9 @@ int main(int argc, char * argv[])
 			else printf("Numero de atribuicoes excede limite maximo");
 			printf("\n");
 		}
+		
+		clock_t end = clock();
+		printf("Tempo decorrido: %d\nOperacoes feitas; %d\n", (1000.0*(end-start))/CLOCKS_PER_SEC, game->ops);
 
 		delete game;
 	}
