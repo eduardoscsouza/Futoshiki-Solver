@@ -12,6 +12,4 @@ test:
 	valgrind --leak-check=full --track-origins=yes ./futoshiki.out 2 < in
 
 time:
-	g++ futoshiki.cpp -O3 -o futoshiki.out
-	time ./futoshiki.out 2 < in
-	@echo "\n"
+	./futoshiki.out 0 <in
