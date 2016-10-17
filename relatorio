@@ -1,0 +1,20 @@
+				Projeto 1 -Futoshiki  (Backtracking)
+
+Eduardo Santos Carlos de Souza		NUSP	 9293481
+Gustavo Cabral de Barros.			NUSP  9293028
+
+Professor: Gustavo Enrique de Almeida Prado Alves Batista
+	  
+A linguagem escolhida para a implementação do Futoshiki foi C++ pelos motivos da existência de Orientação a Objetos, para o uso de classes e principalmente STL (Standard Template Library), que fazem com que a implementação fique mais simples e eficaz.
+O problema foi modelado da seguinte forma. Uma Matriz de números representa o tabuleiro. Os valores vão de -1 a o número de dimensões menos 1 (-1 significa que a posição está indefinida).
+ Para representar as restrições entre maior e menor, foi utilizado um mapa. . O mesmo mapeia um par de posições (a,b) para um número, caso este número seja -1, significa que a < b, caso contrário a > b.
+	Todas as 3 heurísticas funcionam através de recursões indiretas. Existe a função backtracking que chamara uma das funções de heurística para uma certa posição que por sua vez chamarão a função backtracking. Qual das heurísticas seŕa realizada é definido por uma Flag passada na execução do programa .
+./futoshiki.out 0 para backtracking sem poda.
+	./futoshiki.out 1 para heurística Forward Checking.
+./futoshiki.out 2 para heurística Forward Checking+MVR.
+	O backtracking sem poda funciona simplesmente definindo um valor para uma posição ainda indefinida, depois verificando se o tabuleiro é válido checando se nenhuma restrição foi quebrada. Caso seja válido, verifica-se se o jogo já terminou, checando se o número de posições definidas é o número de dimensões ao quadrado, caso não, chama-se recursivamente a função de backtracking.
+	O backtracking com Forward Checking foi modelado utilizando-se de uma classe que possui um vetor de números e um contador. Este vetor é de tamanho n-dimensões com cada posição do vetor começando com 1, e o contador começando com n-dimensões. No jogo existe uma matriz de objetos desta mesma classe e toda vez que for definido um número para uma posição no tabuleiro, será percorrido a linha e a coluna desta posição, subtraindo-se 1 da posição correspondente ao valor definido do vetor da classe. Caso um valor já definido se torne indefinido, será realizado o mesmo de antes, porém somando-se 1 ao invés de subtrair. Desta forma apenas quando o valor de uma posição de um vetor desta classe for igual a 1, será válido este valor para a posição correspondente no tabuleiro. Também toda vez que uma posição do vetor da classe se torna 1, o contador é incrementado, e se deixar de ser 1 ele é decrementado, desta forma o contador armazena quantos valores possíveis remanescentes existem.
+	No Forward Checking simples a função trabalhará com o primeiro valor indefinido que ela encontrar. Já o Forward Checking com MVR, ou seja a próxima heurística, percorrerá todo o tabuleiro procurando a posição com o menor valor do contador. Então ela definirá o primeiro valor possível para essa posição e chamará a recursão.
+
+
+- Como verifica se chegou ao final para um backtracking pura
