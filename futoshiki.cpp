@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <climits>
 #include <cstring>
+#include <cstdlib>
 #include <ctime>
 
 #define LESSER -1
@@ -16,7 +17,7 @@
 
 #define STD_HUERISTIC_LEVEL 2
 
-#define BACKTRACK_LIMIT 1000000
+#define BACKTRACK_LIMIT 10000000
 
 using namespace std;
 
@@ -56,12 +57,12 @@ public:
 		this->pos = pair<char, char>(i, j);
 	}
 	
-	inline const char i() const
+	inline char& i()
 	{
 		return this->pos.first;
 	}
 	
-	inline const char j() const
+	inline char& j()
 	{
 		return this->pos.second;
 	}
@@ -95,12 +96,22 @@ public:
 		this->rest = pair<Pos, Pos>(p1, p2);
 	}
 	
-	inline const Pos p1() const
+	inline Pos& p1()
 	{
 		return this->rest.first;
 	}
 	
-	inline const Pos p2() const
+	inline Pos& p2()
+	{
+		return this->rest.second;
+	}
+	
+	inline const Pos& p1() const
+	{
+		return this->rest.first;
+	}
+	
+	inline const Pos& p2() const
 	{
 		return this->rest.second;
 	}
@@ -204,18 +215,12 @@ public:
 		}
 	}
 	
-	/*
+	
 	~Futoshiki()
-	{
-		for (int i=0; i<this->size; i++) delete this->board[i];
+	{		
+		for (char i=0; i<this->size; i++) delete this->board[i];
 		delete this->board;
-		
-		for (int i=0; i<this->size; i++) {
-			for (int j=0; j<this->size; j++) this->remain[i][j].~Remaining();
-			delete this->remain[i];
-		}
-		delete this->remain;
-	}*/
+	}
 
 	
 	/*
@@ -350,7 +355,7 @@ das possibilidades de "pos", alterando o contador
 quando necessário. Retorna se a posicao ficou com
 0 possibilidades.
 */
-bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
+inline bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
 	//Altera o contador caso mude de 0 para 1 ou de 1 para 0
 	if (game->remain[pos.i()][pos.j()].vect[value] == 1 && !plus_minus) game->remain[pos.i()][pos.j()].count--;
@@ -400,17 +405,30 @@ bool update_possibilities(Futoshiki * game, Pos pos, char value, bool plus_minus
 {
 	bool dead_end = false;
 	
+	Pos aux_pos;
 	//Atualizar possibilidades das linhas e colunas
 	for (char i=0; i<game->size; i++) {
-		dead_end += set_possibility(game, Pos(pos.i(), i), value, plus_minus);
-		dead_end += set_possibility(game, Pos(i, pos.j()), value, plus_minus);
+		aux_pos.i() = pos.i();
+		aux_pos.j() = i;
+		dead_end += set_possibility(game, aux_pos, value, plus_minus);
+		
+		aux_pos.i() = i;
+		aux_pos.j() = pos.j();
+		dead_end += set_possibility(game, aux_pos, value, plus_minus);
 	}
 	
 	//Atualizar possibilidades das restricoes de maior e menor
-	dead_end += update_restriction(game, pos, Pos(pos.i(), pos.j()+1), value, plus_minus);
-	dead_end += update_restriction(game, pos, Pos(pos.i(), pos.j()-1), value, plus_minus);
-	dead_end += update_restriction(game, pos, Pos(pos.i()+1, pos.j()), value, plus_minus);
-	dead_end += update_restriction(game, pos, Pos(pos.i()-1, pos.j()), value, plus_minus);
+	aux_pos.i() = pos.i();
+	aux_pos.j() = pos.j();
+	
+	aux_pos.j()++;
+	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
+	aux_pos.j()--;aux_pos.j()--;
+	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
+	aux_pos.j()++;aux_pos.i()++;
+	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
+	aux_pos.i()--;
+	dead_end += update_restriction(game, pos, aux_pos, value, plus_minus);
 	
 	return dead_end;
 }
@@ -510,18 +528,20 @@ int main(int argc, char * argv[])
 		
 		clock_t start = clock();
 		backtracking(game);
-		if (!game->valid()){
-			printf("Errado\n");
-			return -1;
-		}
-		else{
-			if (game->ops <= BACKTRACK_LIMIT) game->print_board();
-			else printf("Numero de atribuicoes excede limite maximo");
-			printf("\n");
-		}
-		
 		clock_t end = clock();
-		printf("Tempo decorrido: %lf\nOperacoes feitas; %ld\n", (1000.0*(end-start))/CLOCKS_PER_SEC, game->ops);
+		if (game->ops <= BACKTRACK_LIMIT){
+			if (!game->valid()){
+				printf("Errado\n");
+				return -1;
+			}
+			else{
+				game->print_board();
+				printf("\n");
+			}
+		}
+		else printf("Numero de atribuicoes excede limite maximo\n");
+
+		printf("Tempo decorrido: %lf\nOperacoes feitas: %ld\n", (1000.0*(end-start))/CLOCKS_PER_SEC, game->ops);
 
 		delete game;
 	}
