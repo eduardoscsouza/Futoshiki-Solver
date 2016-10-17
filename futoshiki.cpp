@@ -33,6 +33,10 @@ void backtracking(Futoshiki *);
 
 
 
+/*
+Classe para osicao de uma celula no tabuleiro
+Serve como classe "wrapper" para pair<char, char> 
+*/
 class Pos
 {
 public:
@@ -67,6 +71,11 @@ public:
 };
 
 
+/*
+Classe para as restricoes (maior ou menos)
+entre duas posicoes do tabuleiro 
+Serve como classe "wrapper" para pair<Pos, Pos> 
+*/
 class Restriction
 {
 public:
@@ -101,6 +110,15 @@ public:
 };
 
 
+/*
+Classe que possui o vetor de valores posiveis para uma
+certa posicao. Os valores do vetor comecam todos como 1. Caso
+apareca uma restricao (Ex: Um valor ser definido na linha da posicao)
+a posicao corresponde a restricao é decrementada. Dessa forma,
+caso uma posicao do vetor possua valor menor que 1, o valor dessa
+posicao e invalido.
+A classe tambem possui um contador com o numero de valores validos (>=1)
+*/
 class Remaining
 {
 public:
@@ -116,6 +134,7 @@ public:
 	Remaining(char size)
 	{
 		this->vect = new char[size];
+		//Iniciar todos os valores com 1
 		for (char i=0; i<size; i++) vect[i] = 1;
 		
 		this->count = size;
@@ -129,14 +148,23 @@ public:
 };
 
 
+/*
+Classe que possui as informacoes relevantes ao jogo.
+*/
 class Futoshiki
 {
 public:
-	char size, setted;
-	char heur;
-	char ** board;
-	long ops;
+	char size; 		//Tamanho do tabuleiro
+	char setted;	//Numero de posicoes ja definidas
+	char heur;		//Qual heuristica utilizar
+	char ** board;	//Matriz do tabuleiro
+	long ops;		//Numero de operacoes feitas
+	
+	//Matriz dos valores possiveis remanescentes para cada posicao
 	Remaining ** remain;
+	
+	//Mapa das restricoes. Cada Restricao (par de posicoes) esta
+	//mapeado para o tipo da restricao(Maior ou menos)
 	map<Restriction, char> restricts;
 
 
@@ -162,6 +190,7 @@ public:
 		this->board = new char*[size];
 		for(char i=0; i<size; i++) {
 			this->board[i] = new char[size];
+			//Todos os valores comecam como -1, que equivale a nao definido
 			memset(this->board[i], -1, size * sizeof(char));
 		}
 		
@@ -185,7 +214,10 @@ public:
 		delete this->remain;
 	}*/
 
-
+	
+	/*
+	Funcao que faz a leitura do tabuleiro pela stdin
+	*/
 	void read_board(char size, char nRestricts)
 	{
 		for(char i=0; i<size; i++){
@@ -213,7 +245,10 @@ public:
 			}
 		}
 	}
-
+	
+	/*
+	Funcao de impressao do tabuleiro na stdout
+	*/
 	void print_board()
 	{
 		for (char i=0; i<this->size; i++){
@@ -225,7 +260,11 @@ public:
 		}
 	}
 
-
+	
+	/*
+	Funcao que verifica se alguma restrcao do jogo foi quebrada,
+	depois retorna se o tabuleiro atual é valido ou não.
+	*/
 	bool valid()
 	{
 		map<Restriction, char>::iterator it;
@@ -261,7 +300,12 @@ public:
 
 		return true;
 	}
-
+	
+	/*
+	Funcao que verifica se o tabuleiro esta completo comparando
+	o numero de posicoes ja definidas(setted) com o numero
+	maximo possiivel(size^2)
+	*/
 	inline bool ended()
 	{
 		return (this->setted >= this->size * this->size);
@@ -270,6 +314,12 @@ public:
 
 
 
+/*
+Funcao de backtracking sem heuristica.
+Simplesmente define um valor e continua na recursao caso
+o tabulieor esteja valido. Termina quando o numero
+de posicoes definidas for igual ao maximo possivel
+*/
 char no_heur(Futoshiki * game, Pos pos)
 {
 	for (char i=0; i<game->size; i++){
@@ -291,6 +341,11 @@ char no_heur(Futoshiki * game, Pos pos)
 }
 
 
+/*
+Funcao que remove ou adiciona "value"
+das possibilidades de "pos", alterando o contador
+quando necessário
+*/
 bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
 {
 	if (game->remain[pos.i()][pos.j()].vect[value] == 1 && !plus_minus) game->remain[pos.i()][pos.j()].count--;
@@ -300,6 +355,11 @@ bool set_possibility(Futoshiki * game, Pos pos, char value, bool plus_minus)
 	return (game->remain[pos.i()][pos.j()].count <= 0 && game->board[pos.i()][pos.j()]==-1);
 }
 
+/*
+Funcao que atualiza os valores possiveis
+considerando apenas as restricoes de maior ou menor
+entre duas posicoes
+*/
 bool update_restriction(Futoshiki * game, Pos p1, Pos p2, char value, bool plus_minus)
 {
 	bool dead_end = false;
