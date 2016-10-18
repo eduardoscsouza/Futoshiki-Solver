@@ -1,0 +1,8 @@
+all:
+	g++ futoshiki.cpp -O3 -o futoshiki.out
+
+run:
+	./futoshiki.out 2
+
+clean:
+	rm *.out *.o
