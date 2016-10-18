@@ -1,3 +1,8 @@
+/*
+Eduardo Santos Carlos de Souza		9293481
+Gustavo Cabral de Barros			9293481
+*/
+
 #include <map>
 #include <cstdio>
 #include <cstdlib>

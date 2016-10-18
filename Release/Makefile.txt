@@ -1,3 +1,7 @@
+#Eduardo Santos Carlos de Souza		9293481
+#Gustavo Cabral de Barros		9293481
+
+
 all:
 	g++ futoshiki.cpp -O3 -o futoshiki.out
 
